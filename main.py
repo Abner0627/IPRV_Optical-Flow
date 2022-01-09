@@ -1,7 +1,6 @@
 # %%
 import cv2
 import os
-import matplotlib.pyplot as plt
 import func
 
 # %%
@@ -23,9 +22,10 @@ for pt_x, pt_y in zip([250, 400], [325, 270]):
     PX, PY, i = func._flow(pre_img, nxt_img, pt_x, pt_y, func.param, init_flow=None)
     img = func._plot(img, PX, PY)
 
-fig = plt.figure()
-plt.imshow(img)
-plt.show()
+# import matplotlib.pyplot as plt
+# fig = plt.figure()
+# plt.imshow(img)
+# plt.show()
 
 # %%
 fn = img_ty + '_res.png'
