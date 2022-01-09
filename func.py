@@ -1,6 +1,7 @@
 import cv2
 import os
 import numpy as np
+import matplotlib.pyplot as plt
 
 # %%
 def _pick(L, ty, path):
@@ -9,6 +10,32 @@ def _pick(L, ty, path):
 
 def _gray(img):
     return cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+def _Pos(img, idx):
+    def on_press(event):
+        L.append(np.array([int(event.xdata), int(event.ydata)]))
+        # 紀錄點選的座標點
+        if len(L)>=2: 
+            plt.close()
+            # 當點選次數大於等於2時，關閉視窗
+        np.save('./npy/loc_' + idx + '.npy', np.array(L))
+        # 儲存紀錄座標點
+    fig = plt.figure()
+    plt.imshow(img, animated= True)
+    L = []
+    fig.canvas.mpl_connect('button_press_event', on_press)
+    # 用動態圖的形式產生介面供使用者點選目標點
+    plt.show() 
+
+def _PlotPos(img, idx):
+    img_c = np.copy(img)
+    src = np.load('./npy/loc_' + idx + '.npy')
+    print('Choose point 1: ({}, {})'.format(src[0, 0], src[0, 1]))
+    print('Choose point 2: ({}, {})'.format(src[1, 0], src[1, 1]))
+    cv2.circle(img_c, (src[0, 0], src[0, 1]), 3, (0, 38, 255), -1)
+    cv2.circle(img_c, (src[1, 0], src[1, 1]), 3, (0, 38, 255), -1)  
+    plt.imshow(img_c)
+    plt.show()    
 
 def _flow(pre_img, nxt_img, pt_x, pt_y, param, init_flow=None):
     XL, YL = [0], [0]
@@ -33,7 +60,7 @@ def _flow(pre_img, nxt_img, pt_x, pt_y, param, init_flow=None):
         i+=1
         if i>0:
             ep = np.sum(np.abs(XL[i-1] - XL[i])) + np.sum(np.abs(YL[i-1] - YL[i]))
-    return PX, PY, i
+    return PX, PY
 
 def _plot(img, PX, PY):
     for j in range(len(PX)):
@@ -46,7 +73,7 @@ def _plot(img, PX, PY):
             c = (182, 255, 0)
         else:
             c = (255, 0, 0)
-        cv2.circle(img,(PX[k], PY[k]), 3, c, -1)    
+        cv2.circle(img, (PX[k], PY[k]), 3, c, -1)    
     return img
 
 param = dict(pyr_scale=0.8,
