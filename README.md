@@ -87,7 +87,8 @@ def onBtnModifyClick_1():
 ```py
 # func.py
 def _pick(L, ty, path):
-    L_ = [cv2.imread(os.path.join(path, i)) for i in L if i.split('_')[0]==ty]
+    L_ = [cv2.imread(os.path.join(path, i)) \
+        for i in L if i.split('_')[0]==ty]
     # 輸入影像
     return L_
 
@@ -120,7 +121,6 @@ def _PlotPos(img, idx):
     cv2.circle(img_c, (src[1, 0], src[1, 1]), 3, (0, 38, 255), -1)
     # 畫上座標點
     return img_c
-
 ```
 ### Lucas-Kanade Flow
 ```py
@@ -187,6 +187,8 @@ def _plot(img, PX, PY):
     # 依每個iteration輸出的座標畫上標點
     return img
 ```
+其iteration位移向量之差值的計算如下：
+![Imgur](https://i.imgur.com/jClPxK4.png)
 ### 儲存影像
 ```py
 # GUI_support.py
