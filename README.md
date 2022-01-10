@@ -151,9 +151,11 @@ def _LKflow(pre_img, nxt_img, pt_x, pt_y, lk_params):
     # 初始化各參數
     while ep>1e-2:
         if i==0:
-            p1, _, _ = cv2.calcOpticalFlowPyrLK(pre_img, nxt_img, p0, None, **lk_params)
+            p1, _, _ = cv2.calcOpticalFlowPyrLK(pre_img, nxt_img, p0, \
+                        None, **lk_params)
         else:
-            p1, _, _ = cv2.calcOpticalFlowPyrLK(pre_img, nxt_img, p0, p1, flags=cv2.OPTFLOW_USE_INITIAL_FLOW, **lk_params)
+            p1, _, _ = cv2.calcOpticalFlowPyrLK(pre_img, nxt_img, p0, \
+                        p1, flags=cv2.OPTFLOW_USE_INITIAL_FLOW, **lk_params)
         # 用迴圈計算每個iteration的輸出座標
         PX.append(p1[0][0])
         PY.append(p1[0][1])
@@ -161,10 +163,12 @@ def _LKflow(pre_img, nxt_img, pt_x, pt_y, lk_params):
         YL.append(PY[i] - PY[i+1])
         # 紀錄輸出座標與位移向量
         if i>0:
-            ep = np.sum(np.abs(XL[i-1] - XL[i])) + np.sum(np.abs(YL[i-1] - YL[i])) 
+            ep = np.sum(np.abs(XL[i-1] - XL[i])) + \
+                 np.sum(np.abs(YL[i-1] - YL[i])) 
             # 與前一個iteration位移向量之差值，
             # 當差值<0.01時則停止迴圈
-        print('iter:{}, ep:{}\nu = {:.4f}, v = {:.4f}'.format(i, ep, XL[i], YL[i]))
+        print('iter:{}, ep:{}\nu = {:.4f}, v = {:.4f}'\
+                .format(i, ep, XL[i], YL[i]))
         print('x = {:.4f}, y = {:.4f}'.format(PX[i+1], PY[i+1]))
         print('======================')    
         i+=1    
@@ -175,7 +179,8 @@ def _plot(img, PX, PY):
     PY = np.array(PY).astype(np.int)
     for j in range(len(PX)):
         if j!=0:
-            cv2.line(img, (PX[j-1], PY[j-1]), (PX[j], PY[j]), (250, 5, 216), 2)
+            cv2.line(img, (PX[j-1], PY[j-1]), (PX[j], PY[j]), \
+                (250, 5, 216), 2)
     for k in range(len(PX)):
         if k==0:
             c = (0, 38, 255)
