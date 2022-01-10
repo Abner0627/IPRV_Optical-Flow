@@ -36,7 +36,7 @@ def onBtnModifyClick_1():
     img_list = os.listdir('./img')
     # 取得./img中影像列表
     text_get = w.TEntry1.get()
-    # 取得GUI輸入(此處為影像編號)
+    # 取得GUI輸入(此處為影像名稱)
     IMG_L = func._pick(img_list, text_get, './img')
     # 選取影像之檔名並加載影像
     pre_img = func._gray(IMG_L[0])

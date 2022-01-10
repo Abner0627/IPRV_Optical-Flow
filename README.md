@@ -50,323 +50,166 @@ Project
 使用介面介紹如下：
 ![Imgur](https://i.imgur.com/A3fBprm.png)
 (1) 輸入影像的名稱，此作業共有"Cup"與"Pillow"兩類\
-(2) 加載上述影像
-(3) 計算每個iteration之Lucas-Kanade Flow的輸出點
+(2) 加載上述影像\
+(3) 計算每個iteration之Lucas-Kanade Flow的輸出點\
+(4) 儲存影像\
+另外在terminal上會依序print出目前流程的資訊，詳見以下操作影片：\
+[![Imgur](https://i.imgur.com/0r4JQVj.png)](https://www.youtube.com/watch?v=K2AEwcPKR8I)
+
 ## 程式碼說明
-### Arguments
+此處依上述GUI介面按鍵標號((2)~(4))進行說明，並省略GUI介面設計之介紹
+### 輸入影像並供使用者選取座標點
 ```py
-# main.py
-parser = argparse.ArgumentParser()
-parser.add_argument('-I','--image',
-                   default='100',
-                   help='import image type, such as 100 or Die')
-# 輸入圖片類型，範例為'100'及'Die'                   
-parser.add_argument('-T','--thrs',
-                    default=0.85,
-                    help='thrs of CC')
-args = parser.parse_args()
-```
-### 設定路徑
-```py
-# main.py
-path = './img'
-img_list, tpl_list = func._split(path, img_type=args.image)
-```
-```py
-# func.py
-def _split(path, img_type):
-    tot_list = os.listdir(path)
-    # 取得path下所有檔案名稱
-    img_list, tpl_list = [], []
-    for j in tot_list:
-        k = j.replace('.', '-')
-        if k.split('-')[0]==img_type and k.split('-')[-2]!='MatchResult':
-            if k.split('-')[-2]=='Template':
-                tpl_list.append(j)
-                # 找出作為Template的影像
-            else:
-                img_list.append(j)
-                # 待偵測的影像
-    return img_list, tpl_list
-```
-### 讀取影像並轉為灰階
-```py
-# main.py
-tStart = time.time()
-# 開始計時
-img_org = cv2.imread(os.path.join(path, Fn))
-#讀取圖片及模板
-tpl = cv2.imread(os.path.join(path, tpl_list[0]))   
-# %%
-I_org = cv2.cvtColor(img_org, cv2.COLOR_BGR2GRAY)
-T_org = cv2.cvtColor(tpl, cv2.COLOR_BGR2GRAY) 
-# 轉為灰階
-```
-
-### 使用Gaussian kernel做down sampling
-```py
-# main.py
-I = func._DSP(I_org, func.G/16, iter=3)
-T = func._DSP(T_org, func.G/16, iter=3)
-# Down sampling
+# GUI_support.py
+def onBtnModifyClick_1():
+    global IMG_L
+    global img_0
+    global pre_img
+    global nxt_img
+    global text_get
+    img_list = os.listdir('./img')
+    # 取得./img中影像列表
+    text_get = w.TEntry1.get()
+    # 取得GUI輸入(此處為影像名稱)
+    IMG_L = func._pick(img_list, text_get, './img')
+    # 選取影像之檔名並加載影像
+    pre_img = func._gray(IMG_L[0])
+    nxt_img = func._gray(IMG_L[1])
+    # 從BGR轉至RGB
+    img_0 = cv2.cvtColor(IMG_L[0], cv2.COLOR_BGR2RGB)
+    func._Pos(img_0, text_get)
+    # 生成影像用以供使用者標記目標點
+    img_0 = func._PlotPos(img_0, text_get)
+    plt.imshow(img_0)
+    plt.show() 
+    # 畫上選取點
 ```
 ```py
 # func.py
-def _pad(X, k):
-    XX_shape = tuple(np.subtract(X.shape, k.shape) + (1, 1))
-    # 計算使用k做conv.之後的影像大小
-    # H' = H - (Hk - 1)，此處H'需等於H
-    if XX_shape!=X.shape:
-        P = np.subtract(X.shape, XX_shape) // 2
-        # 計算需要pad多少像素
-        MD = np.subtract(X.shape, XX_shape) % 2
-        X_ = np.pad(X, ((P[0], P[0]+MD[0]), (P[1], P[1]+MD[1])), 'constant')
-        # 進行padding，當需要pad的像素數量為奇數時，則多pad 1個像素
-    else:
-        X_ = X
-    return X_
+def _pick(L, ty, path):
+    L_ = [cv2.imread(os.path.join(path, i)) for i in L if i.split('_')[0]==ty]
+    # 輸入影像
+    return L_
 
-# 高斯核
-G = np.array([[1,  4,  6,  4, 1],
-              [4, 16, 24, 16, 4],
-              [6, 24, 36, 24, 6],
-              [4, 16, 24, 16, 4],
-              [1,  4,  6,  4, 1]])
+def _gray(img):
+    return cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
-def _DSP(X, k, iter=1):
-    for i in range(iter):
-        k_ = k / (k.shape[0] * k.shape[1])
-        # 將kernel 正規化
-        X_pad = _pad(X, k_)
-        # zero padding
-        view_shape = tuple(np.subtract(X_pad.shape, k_.shape) + 1) + k_.shape
-        # 計算視野大小(H', W', Hk, Wk)
-        strides = X_pad.strides + X_pad.strides
-        # 在W 方向時，元素間隔皆為4 byte (X_pad[i, 0] to X_pad[i, 1])；
-        # 在H 方向時，元素間隔皆為4*W byte (X_pad[0, j] to X_pad[1, j])。
-        # 由於前後兩個維度的計算方式一樣，故最終strides 為(4W, 4, 4W, 4)        
-        sub_matrices = as_strided(X_pad, view_shape, strides) 
-        # 將X_pad 依kernel 大小分割並排成view_shape 大小的矩陣
-        cv = np.einsum('klij,ij->kl', sub_matrices, k_)
-        # 矩陣內積 sub_matrices(S), k_(K), cv(C)
-        # (C)_{kl} = (S)_{klij} · (K)_{ij}        
-        X = cv[::2, ::2]
-        # 刪除W與H方向的影像像素
-    return X
-```
-假設原影像為3x3的矩陣，kernel為2x2，則sub_matrices示意圖如下(右)：
-![Imgur](https://i.imgur.com/HB3MQKC.png)
-
-### 切割影像為sub_matrices (形式同上)
-```py
-# main.py
-I_pad = func._pad(I, T)  
-# Zero padding，使得match前後的影像大小一致 
-sub_matrices = func._sub(I_pad, T)
-# 將影像I_pad切割為，與kernel大小與T相同的數個小矩陣
-```
-```py
-# func.py
-def _sub(I, T):
-    view_shape = tuple(np.subtract(I.shape, T.shape) + 1) + T.shape
-    strides = I.strides + I.strides
-    sub_matrices = as_strided(I, view_shape, strides)
-    # 切割影像；以上三行同_DSP
-    return sub_matrices
-```
-### Matching
-```py
-# main.py
-CC = func._match(sub_matrices, T)
-# Normalized Correlation Coefficient Matching
-```
-其公式如下 (I為原影像，T為template)：
-![Imgur](https://i.imgur.com/wsBATwL.png)
-```py
-# func.py
-def _nor(X, h, w):
-    X_ = X - np.sum(X) / (h*w)
-    # CC的正規化運算
-    return X_
-
-def _CC(X, Y):
-    res = np.sum(X * Y) / np.sqrt(np.sum(X**2) * np.sum(Y**2))
-    # 計算Correlation Coefficient
-    return res
-
-def _match(sub_matrices, T):
-    h_, w_, h, w = sub_matrices.shape
+def _Pos(img, idx):
+    def on_press(event):
+        L.append(np.array([int(event.xdata), int(event.ydata)]))
+        # 紀錄點選的座標點
+        if len(L)>=2: 
+            plt.close()
+            # 當點選次數大於等於2時，關閉視窗
+        np.save('./npy/loc_' + idx + '.npy', np.array(L))
+        # 儲存紀錄座標點
+    fig = plt.figure()
+    plt.imshow(img, animated= True)
     L = []
-    T_ = _nor(T, h, w)
-    for y, x in product(range(h_), range(w_)):
-    # 於迴圈內計算template與每個從影像切割出的小矩陣之CC
-        S_ = _nor(sub_matrices[y, x, :, :], h, w)
-        L.append(_CC(T_, S_))
-    res = np.array(L).reshape(h_, w_)
-    return res
+    fig.canvas.mpl_connect('button_press_event', on_press)
+    # 用動態圖的形式產生介面供使用者點選目標點
+    plt.show() 
+
+def _PlotPos(img, idx):
+    img_c = np.copy(img)
+    src = np.load('./npy/loc_' + idx + '.npy')
+    # 輸入儲存的選取座標
+    print('Choose point 1: ({}, {})'.format(src[0, 0], src[0, 1]))
+    print('Choose point 2: ({}, {})'.format(src[1, 0], src[1, 1]))
+    cv2.circle(img_c, (src[0, 0], src[0, 1]), 3, (0, 38, 255), -1)
+    cv2.circle(img_c, (src[1, 0], src[1, 1]), 3, (0, 38, 255), -1)
+    # 畫上座標點
+    return img_c
+
 ```
-### Up sampling
+### Lucas-Kanade Flow
 ```py
-# main.py
-res = func._USP(CC, func.G/4, iter=3) 
-# Up sampling
-res_ = (res - np.min(res)) / (np.max(res) - np.min(res))
-# 縮放至0~1用以計算score
+# GUI_support.py
+def onBtnModifyClick_2():
+    global img_1
+    img_1 = cv2.cvtColor(IMG_L[1], cv2.COLOR_BGR2RGB)
+    src = np.load('./npy/loc_' + text_get + '.npy')
+    # 讀取儲存的選取點座標
+    for idx in range(2):
+        print('\nPoint {}'.format(idx+1))
+        pt_x, pt_y = src[idx, 0], src[idx, 1]
+        PX, PY = func._LKflow(pre_img, nxt_img, pt_x, pt_y, func.lk_params)
+        # Lucas-Kanade Flow
+        img_1 = func._plot(img_1, PX, PY)
+        # 畫出每個iteration的標點
+    plt.imshow(img_1)
+    plt.show()
 ```
 ```py
 # func.py
-def _USP(DP, k, iter=1):
-    for i in range(iter):
-        DP_ = np.insert(DP, range(DP.shape[0]), 0, axis=0)
-        X = np.insert(DP_, range(DP.shape[1]), 0, axis=1)
-        # 在W與H方向的奇數列pad 0
-        k_ = k / (k.shape[0] * k.shape[1])
-        X_pad = _pad(X, k_)
-        view_shape = tuple(np.subtract(X_pad.shape, k_.shape) + 1) \
-                        + k_.shape
-        strides = X_pad.strides + X_pad.strides
-        sub_matrices = as_strided(X_pad, view_shape, strides) 
-        DP = np.einsum('klij,ij->kl', sub_matrices, k_)
-        # 以上六行同_DSP
-    return DP
-```
-### 取得特徵點的bounding boxes
-此處在得到所有特徵點的bounding boxes之後，\
-會再進一步將重複的boxes用non-maximum suppression去除。
-```py
-# main.py
-box_res = func._getBox(res_, T_org, float(args.thrs))
-# 取得以特徵點為中心的bounding boxes
-```
-```py
-# func.py
-def _NMS(boxes, overlapThresh):
-	boxes = boxes.astype("float")
-	# 確保boxes為float
-	pick = []
-	x1 = boxes[:,0]    # 左上x座標
-	y1 = boxes[:,1]    # 左上y座標
-	x2 = boxes[:,2]    # 右下x座標
-	y2 = boxes[:,3]    # 右下y座標
-    # 取得boxes的各角落座標
-	area = (x2 - x1 + 1) * (y2 - y1 + 1)
-    # 計算boxes的面積
-	idxs = np.argsort(y2)
-    # 依右下y座標排序
-	while len(idxs) > 0:
-		last = len(idxs) - 1
-		i = idxs[last]
-		pick.append(i)
-        # 取idxs中最後一項box的index並紀錄之
-		xx1 = np.maximum(x1[i], x1[idxs[:last]])
-		yy1 = np.maximum(y1[i], y1[idxs[:last]])
-		xx2 = np.minimum(x2[i], x2[idxs[:last]])
-		yy2 = np.minimum(y2[i], y2[idxs[:last]])
-        # 計算最後一項box與其他boxes的重疊區域之座標
-		w = np.maximum(0, xx2 - xx1 + 1)
-		h = np.maximum(0, yy2 - yy1 + 1)
-        # 計算重疊區域之w與h，當不重疊時w或h為0
-		overlap = (w * h) / area[idxs[:last]]
-        # 計算重疊面積所佔template面積比例
-		idxs = np.delete(idxs, np.concatenate(([last],\
-			   np.where(overlap > overlapThresh)[0])))
-        # 當該box重疊面積比大於其他boxes時，刪除其index
-	return boxes[pick].astype("int")
-    # 最終輸出所剩boxes列表
+def _LKflow(pre_img, nxt_img, pt_x, pt_y, lk_params):
+    p0 = np.array([[pt_x, pt_y]]).astype(np.float32)
+    i = 0
+    PX, PY = [pt_x], [pt_y]
+    XL, YL = [], []
+    ep = 1e3
+    # 初始化各參數
+    while ep>1e-2:
+        if i==0:
+            p1, _, _ = cv2.calcOpticalFlowPyrLK(pre_img, nxt_img, p0, None, **lk_params)
+        else:
+            p1, _, _ = cv2.calcOpticalFlowPyrLK(pre_img, nxt_img, p0, p1, flags=cv2.OPTFLOW_USE_INITIAL_FLOW, **lk_params)
+        # 用迴圈計算每個iteration的輸出座標
+        PX.append(p1[0][0])
+        PY.append(p1[0][1])
+        XL.append(PX[i] - PX[i+1])
+        YL.append(PY[i] - PY[i+1])
+        # 紀錄輸出座標與位移向量
+        if i>0:
+            ep = np.sum(np.abs(XL[i-1] - XL[i])) + np.sum(np.abs(YL[i-1] - YL[i])) 
+            # 與前一個iteration位移向量之差值，
+            # 當差值<0.01時則停止迴圈
+        print('iter:{}, ep:{}\nu = {:.4f}, v = {:.4f}'.format(i, ep, XL[i], YL[i]))
+        print('x = {:.4f}, y = {:.4f}'.format(PX[i+1], PY[i+1]))
+        print('======================')    
+        i+=1    
+    return PX, PY    
 
-def _getBox(res, T_org, thrs):
-    M = np.where(res>thrs, 1, 0) 
-    box_i, box_j = np.where(M!=0)
-    # 找出CC最高的特徵點
-    # 其中CC大於thrs的像素才會被視作特徵點
-    # 最後標示其座標為box中心座標
-    h, w = T_org.shape
-    boxes = np.vstack([box_j - w//2, box_i - h//2,\
-                       box_j + w//2, box_i + h//2]).T
-    # 計算box左上及右下之x, y座標
-    box_res = _NMS(boxes, 0.4)
-    # non-maximum suppression
-    return box_res
+def _plot(img, PX, PY):
+    PX = np.array(PX).astype(np.int)
+    PY = np.array(PY).astype(np.int)
+    for j in range(len(PX)):
+        if j!=0:
+            cv2.line(img, (PX[j-1], PY[j-1]), (PX[j], PY[j]), (250, 5, 216), 2)
+    for k in range(len(PX)):
+        if k==0:
+            c = (0, 38, 255)
+        elif k==len(PX)-1:
+            c = (182, 255, 0)
+        else:
+            c = (255, 0, 0)
+        cv2.circle(img, (PX[k], PY[k]), 3, c, -1) 
+    # 依每個iteration輸出的座標畫上標點
+    return img
 ```
-### 畫出偵測範圍並標註中心點
+### 儲存影像
 ```py
-# main.py
-I_box_R = func._plotBox(I_org, box_res, res_)
-# 將bounding boxes畫於原影像上，並標註其中心點座標及計算score
-```
-```py
-# func.py
-def _plotBox(I_org, box_res, res_):
-    I_box_R = cv2.cvtColor(I_org, cv2.COLOR_GRAY2BGR)
-    # 轉灰階為BGR
-    Lx, Ly = [], []
-    for i in range(len(box_res)):
-        x1, y1 = box_res[i, :2]
-        x2, y2 = box_res[i, 2:]
-        mid_x, mid_y = (x1 + x2) // 2, (y1 + y2) // 2
-        Lx.append(mid_x)
-        Ly.append(mid_y)
-        # 計算box中心座標
-        score = res_[mid_y, mid_x]
-        # 計算score
-        text_X = 'X: ' + str(mid_x)
-        text_Y = 'Y: ' + str(mid_y)
-        text_sc = 'S: ' + str(np.round(score, 2))
-        
-        cv2.rectangle(I_box_R, (x1, y1), (x2, y2), (0, 0, 255), 1)
-        # 畫出box
-        cv2.putText(I_box_R, text_X, (mid_x, mid_y), \
-                    cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 1, \
-                    cv2.LINE_AA)
-        cv2.putText(I_box_R, text_Y, (mid_x, mid_y+45), \
-                    cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 1, \
-                    cv2.LINE_AA)
-        cv2.putText(I_box_R, text_sc, (mid_x, mid_y+90), \
-                    cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 1, \
-                    cv2.LINE_AA)
-        # 標註box中心座標以及score
-    return I_box_R
-```
-### 設定路徑並儲存影像
-```py
-# main.py
-sFn = 'result-' + Fn
-sP = './result'
-cv2.imwrite(os.path.join(sP, sFn), I_box_R)
-# 儲存影像，命名為'result-' + <原檔名>
-tEnd = time.time()
-print ("\n" + "It cost {:.4f} sec" .format(tEnd-tStart))
-# 停止計時並print出所需時間
-```
-### 儲存box座標與cv2做比較
-```py
-# main.py
-sPpy = './npy'
-sFpy = Fn.split('.')[0] + '_box.npy'
-np.save(os.path.join(sPpy, sFpy), box_res)
+# GUI_support.py
+def onBtnModifyClick_3():
+    fn = text_get + '_res.png'
+    fn0 = text_get + '_init.png'
+    sP = './res'
+    cv2.imwrite(os.path.join(sP, fn), cv2.cvtColor(img_1, cv2.COLOR_RGB2BGR))
+    cv2.imwrite(os.path.join(sP, fn0), cv2.cvtColor(img_0, cv2.COLOR_RGB2BGR))
+    # 將結果轉回BGR使用cv2儲存
+    print('\nSaved')
 ```
 
-## 偵測結果展示
-與cv2的box中心座標的誤差表示如下：\
-![Imgur](https://i.imgur.com/R6IVx9s.png)\
-(詳見`cv2_diff.py`)
-### 100
-![Imgur](https://i.imgur.com/PT6jids.jpg)\
-誤差：[(87, 126)], [(86, 127)]\
-![Imgur](https://i.imgur.com/uL7cmuC.jpg)\
-誤差：[(88, 126)], [(82, 128)]\
-![Imgur](https://i.imgur.com/tqEgfIF.jpg)\
-誤差：[(87, 127)], [(85, 127)]\
-![Imgur](https://i.imgur.com/WhQ9Fh2.jpg)
-誤差：[(87, 128)], [(85, 130)]
-#### 花費時間 (依上圖順序)
-![Imgur](https://i.imgur.com/YdqiEXP.png)
+## 結果展示
+### Cup
+#### Cup_init
+![Imgur](https://i.imgur.com/tjcJT6K.png)
+#### Cup_res
+![Imgur](https://i.imgur.com/bbVAnq5.png)
 
-### Die
-![Imgur](https://i.imgur.com/2KQVcKl.png)\
-誤差：[(75, 124)], [(71, 138)], [(73, 138)]\
-![Imgur](https://i.imgur.com/jUVNLC2.png)\
-誤差：[(76, 23)], [(72, 143)], [(202, 143)]
-#### 花費時間 (依上圖順序)
-![Imgur](https://i.imgur.com/MegWgm3.png)
+### Pillow
+#### Pillow_init
+![Imgur](https://i.imgur.com/QjhylIa.png)
+#### Pillow_res
+![Imgur](https://i.imgur.com/zxaF64M.png)
 
