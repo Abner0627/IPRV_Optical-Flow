@@ -4,24 +4,22 @@ NCKU Image Processing and Robot Vision course homework
 ## 專案目錄結構
 ```
 Project
-│   main.py
+│   GUI.py
+|   GUI_support.py
 │   func.py
-│   cv2_diff.py
 │   requirements.txt  
 │   README.md      
 │   ...    
 └───img   
-│   │   100-1.jpg
-|   |   100-2.jpg
-|   |   100-Template.jpg
+│   │   Cup_0.Jpg
+|   |   Cup_1.Jpg
 │   │   ...
 └───result   
-│   │   result-100-1.jpg
-│   │   result-100-2.jpg
+│   │   Cup_init.png
+│   │   Cup_res.png
 |   |   ...
 └───npy  
-│   │   100-1_box.npy
-│   │   100-2_box.npy
+│   │   loc_Cup.npy
 |   |   ...
 └───ipynb 
 ```
