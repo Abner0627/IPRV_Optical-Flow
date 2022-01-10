@@ -27,12 +27,12 @@ Project
 ## 前置工作
 ### 作業說明
 * 目標\
-透過影像處理的方式偵測圖中與提供的template相似的區塊，\
-並標註其bounding boxes、中心座標，以及中心座標之matching的相似程度。
+透過Lucas-Kanade Flow偵測兩張影像之間的光流，\
+並標註每個iteration的輸出座標。
 
 ### 環境
 * python 3.8
-* Win 10
+* Win 11
 
 ### 使用方式
 1. 進入專案資料夾\
@@ -40,26 +40,18 @@ Project
 
 2. 使用`pip install -r requirements.txt`安裝所需套件
 
-3. 將欲處理的影像放入`./img`中\　　
+3. 將欲處理的影像放入`./img`中\
    所有檔案的命名規則如下：\
-   欲偵測影像：`<影像名稱>-<編號>.<副檔名>`\
-   template：`<影像名稱>-Template.<副檔名>`\
+   欲偵測影像：`<影像名稱>_<編號>.<副檔名>`\
    示意如下：\
-   ![Imgur](https://i.imgur.com/xbJBhrY.png) 
-4. 執行主程式進行影像處理\
-`python main.py -I <影像名稱> -T <閥值>`   
-其中`-I <影像名稱>`表示指定欲處理的影像名稱；\
-`-T <閥值>`則代表correlation coefficient (CC)的閥值，\
-CC大於該閥值才會被視作特徵點。\
-預設為0.85。
-\
-程式跑完之後會在terminal上分別顯示每張影像花費的時間，如下：
-![Imgur](https://i.imgur.com/titfDi0.png)
-\
-處理後的影像會生成至`./result`中，並以`result-<影像名稱>-<編號>.<副檔名>`的形式命名，\
-如下示意圖：\
-![Imgur](https://i.imgur.com/QBRve3T.png)
-
+   ![Imgur](https://i.imgur.com/AjEHsrJ.png)
+4. 執行主程式開啟GUI\
+`python GUI.py`   
+使用介面介紹如下：
+![Imgur](https://i.imgur.com/A3fBprm.png)
+(1) 輸入影像的名稱，此作業共有"Cup"與"Pillow"兩類\
+(2) 加載上述影像
+(3) 計算每個iteration之Lucas-Kanade Flow的輸出點
 ## 程式碼說明
 ### Arguments
 ```py
