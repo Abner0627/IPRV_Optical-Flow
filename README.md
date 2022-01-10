@@ -155,7 +155,8 @@ def _LKflow(pre_img, nxt_img, pt_x, pt_y, lk_params):
                         None, **lk_params)
         else:
             p1, _, _ = cv2.calcOpticalFlowPyrLK(pre_img, nxt_img, p0, \
-                        p1, flags=cv2.OPTFLOW_USE_INITIAL_FLOW, **lk_params)
+                        p1, flags=cv2.OPTFLOW_USE_INITIAL_FLOW, \
+                        **lk_params)
         # 用迴圈計算每個iteration的輸出座標
         PX.append(p1[0][0])
         PY.append(p1[0][1])
@@ -201,8 +202,10 @@ def onBtnModifyClick_3():
     fn = text_get + '_res.png'
     fn0 = text_get + '_init.png'
     sP = './res'
-    cv2.imwrite(os.path.join(sP, fn), cv2.cvtColor(img_1, cv2.COLOR_RGB2BGR))
-    cv2.imwrite(os.path.join(sP, fn0), cv2.cvtColor(img_0, cv2.COLOR_RGB2BGR))
+    cv2.imwrite(os.path.join(sP, fn), \
+        cv2.cvtColor(img_1, cv2.COLOR_RGB2BGR))
+    cv2.imwrite(os.path.join(sP, fn0), \
+        cv2.cvtColor(img_0, cv2.COLOR_RGB2BGR))
     # 將結果轉回BGR使用cv2儲存
     print('\nSaved')
 ```
